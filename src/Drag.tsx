@@ -5,7 +5,8 @@ import {
   FlatList,
   StyleSheet,
   PanResponder,
-  PanResponderInstance
+  PanResponderInstance,
+  Animated
 } from "react-native";
 
 function getRandomColor() {
@@ -21,6 +22,7 @@ const colorMap = {};
 
 class Drag extends Component {
   state = {
+    dragging: false,
     data: Array.from(Array(200), (_, i) => {
       colorMap[i] = getRandomColor();
       return i;
@@ -28,6 +30,8 @@ class Drag extends Component {
   };
 
   _panResponder: PanResponderInstance;
+  // current position
+  point = new Animated.ValueXY();
 
   constructor(props) {
     super(props);
@@ -43,9 +47,13 @@ class Drag extends Component {
         // The gesture has started. Show visual feedback so the user knows
         // what is happening!
         // gestureState.d{x,y} will be set to zero now
+        console.log(gestureState.y0);
+        this.setState({
+          dragging: true
+        });
       },
       onPanResponderMove: (evt, gestureState) => {
-        console.log(gestureState.moveY);
+        Animated.event([{ y: this.point.y }])({ y: gestureState.moveY });
         // The most recent move distance is gestureState.move{X,Y}
         // The accumulated gesture distance since becoming responder is
         // gestureState.d{x,y}
@@ -68,41 +76,55 @@ class Drag extends Component {
   }
 
   render() {
-    const { data } = this.state;
+    const { data, dragging } = this.state;
+
+    const renderItem = ({ item }) => (
+      <View
+        style={{
+          padding: 16,
+          backgroundColor: colorMap[item],
+          flexDirection: "row"
+        }}
+      >
+        <View {...this._panResponder.panHandlers}>
+          <Text
+            style={{
+              fontSize: 28
+            }}
+          >
+            @
+          </Text>
+        </View>
+        <Text
+          style={{
+            fontSize: 22,
+            textAlign: "center",
+            flex: 1
+          }}
+        >
+          {item}
+        </Text>
+      </View>
+    );
+
     return (
       <View style={styles.root}>
+        <Animated.View
+          style={{
+            backgroundColor: "black",
+            zIndex: 2,
+            height: 20,
+            width: "100%",
+            top: this.point.getLayout().top
+          }}
+        >
+          {renderItem({ item: 3 })}
+        </Animated.View>
         <FlatList
+          scrollEnabled={!dragging}
           style={{ width: "100%" }}
           data={data}
-          renderItem={({ item }) => (
-            <View
-              style={{
-                padding: 16,
-                backgroundColor: colorMap[item],
-                flexDirection: "row"
-              }}
-            >
-              <View {...this._panResponder.panHandlers}>
-                {/* handle */}
-                <Text
-                  style={{
-                    fontSize: 28
-                  }}
-                >
-                  @
-                </Text>
-              </View>
-              <Text
-                style={{
-                  fontSize: 22,
-                  textAlign: "center",
-                  flex: 1
-                }}
-              >
-                {item}
-              </Text>
-            </View>
-          )}
+          renderItem={renderItem}
           keyExtractor={(item) => " " + item}
         />
       </View>
